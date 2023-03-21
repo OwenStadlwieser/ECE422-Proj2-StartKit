@@ -1,10 +1,7 @@
-import random
-import time
-import pandas
-import statistics
 import docker
 from flask import Flask
 import requests
+import time
 app = Flask(__name__)
 
 IMAGE_NAME = "web_app"
@@ -20,23 +17,24 @@ def calc_response_time():
     
 #     docker.service.update(mode={'Replicated': {'Replicas': new_replicas}}).create()
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000, debug=True)
-
 
 @app.route('/')
 def hello():
-      start_time = time.time()
-      r = requests.post('http://web:8000')
-      end_time = time.time()
-      res_time = start_time - end_time
-      if (res_time < LOWER_BOUND):
-        pass
-      elif (res_time > HIGHER_BOUND):
-        pass   
-      else: 
-        pass
-      print("Respone time: ", res_time)
-      return r
+  start_time = time.time()
+  r = requests.get('http://web:8000')
+  end_time = time.time()
+  res_time = start_time - end_time
+  if (res_time < LOWER_BOUND):
+    pass
+  elif (res_time > HIGHER_BOUND):
+    pass   
+  else: 
+    pass
+  print("Respone time: ", res_time)
+  return r.text
+
+if __name__ == "__main__":
+  app.run(host="0.0.0.0", port=8000, debug=True)
+
 
            
