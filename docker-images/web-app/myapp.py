@@ -6,9 +6,6 @@ run the difficult function.
 
 from flask import Flask
 from redis import Redis
-import random
-import time
-
 app = Flask(__name__)
 redis = Redis(host='redis', port=6379)
 
