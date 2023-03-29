@@ -4,32 +4,76 @@ import requests
 import time
 app = Flask(__name__)
 
-IMAGE_NAME = "web_app"
-LOWER_BOUND = 20
-HIGHER_BOUND = 50
-def calc_response_time():
-    pass
+SERVICE_NAME = "app_name_web"
 
-# def create_service():
-#     docker.service.create(IMAGE_NAME, )
 
-# def set_number_of_replicas(num_reps: int):
+import time
+
+class DockerController:
+    def __init__(self, service_name):
+        self.service_name = service_name
+        self.client = docker.DockerClient(base_url='unix:///var/run/docker.sock')
+        self.service = self.client.services.get(self.service_name)
+        print("Getting replicas")
+        self.number_of_replicas = self.get_number_of_replicas()
+        print("Got replicas")
+
+    def decrement_num_reps(self):
+        if self.number_of_replicas > 1:
+          print("Decrementing number of replicas")
+          self.service.reload()
+          self.service.update(mode={'Replicated': {'Replicas': self.number_of_replicas - 1}})
+          self.number_of_replicas = self.number_of_replicas - 1
+
+    def increment_num_reps(self):
+        print("Incrementing number of replicas")
+        self.service.reload()
+        self.service.update(mode={'Replicated': {'Replicas': self.number_of_replicas + 1}})
+        self.number_of_replicas = self.number_of_replicas + 1
+
+    def get_number_of_replicas(self):
+        return self.service.attrs['Spec']['Mode']['Replicated']['Replicas']
+
+class AverageCalculator:
+    def __init__(self, sample_time=15):
+        self.sample_time = sample_time
+        self.times = []
+        self.last_sample_start = time.time()
+        self.docker_controller = DockerController(SERVICE_NAME)
+        self.response_times_per_replica = []
+        self.baseline_average = 1.5
+        self.prev_average = 0
+        self.num_replicas = self.docker_controller.number_of_replicas
+
+    def is_window_expired(self):
+      if time.time() - self.last_sample_start > self.sample_time:
+        return True
     
-#     docker.service.update(mode={'Replicated': {'Replicas': new_replicas}}).create()
+    def get_average(self):
+      if self.is_window_expired():
+        self.last_sample_start = time.time()
+        average = sum(self.times) / len(self.times)
+        self.times = []
+        if (average < self.baseline_average):
+          self.docker_controller.decrement_num_reps()
+        elif (average > self.baseline_average):
+          self.docker_controller.increment_num_reps()
+        self.prev_average = average
 
+    def update(self, process_variable):
+      self.times.append(process_variable)
+      self.response_times_per_replica.append(process_variable/self.num_replicas)
+      self.get_average()
+        
+averageCalculator = AverageCalculator()
 
 @app.route('/')
 def hello():
   start_time = time.time()
   r = requests.get('http://web:8000')
   end_time = time.time()
-  res_time = start_time - end_time
-  if (res_time < LOWER_BOUND):
-    pass
-  elif (res_time > HIGHER_BOUND):
-    pass   
-  else: 
-    pass
+  res_time = end_time - start_time
+  averageCalculator.update(res_time)
   print("Respone time: ", res_time)
   return r.text
 
