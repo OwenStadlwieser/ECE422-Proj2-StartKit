@@ -12,7 +12,8 @@ SERVICE_NAME = "app_name_web"
 
 epsilon = 5
 
-delta_epsilon = 0.2
+delta_epsilon = 0.35
+gamma_epsilon = 0.115
 print("In app")
 
 class DockerController:
@@ -54,10 +55,12 @@ class AverageCalculator:
     def __init__(self, sample_time=15):
         self.sample_time = sample_time
         self.times = []
+        self.total_requests = 0
+        self.prev_total_requests = 0
         self.last_sample_start = time.time()
         self.docker_controller = DockerController(SERVICE_NAME)
         self.response_times_per_replica = []
-        self.baseline_average = 1.6
+        self.baseline_average = 1.7
         self.prev_average = 0
         self.num_replicas = self.docker_controller.number_of_replicas
 
@@ -70,13 +73,14 @@ class AverageCalculator:
       print("Times")
       print(self.times)
       print(self.response_times_per_replica)
+      request_per_sec = self.total_requests / self.sample_time
       if self.times and len(self.times) > 0:
         average = sum(self.times) / len(self.times)
         self.times = []
         self.response_times_per_replica = []
-        if (average < self.baseline_average or average < ( self.prev_average - epsilon )):
+        if average < (self.baseline_average - gamma_epsilon):
           self.docker_controller.decrement_num_reps()
-        elif (average > self.baseline_average and average > ( self.prev_average + delta_epsilon )):
+        elif average > (self.baseline_average + delta_epsilon): 
           factor = int(average // self.baseline_average)
           self.docker_controller.increment_num_reps(factor)
         self.prev_average = average
@@ -93,7 +97,12 @@ class GraphDrawer:
     self.docker_controller = DockerController(SERVICE_NAME)
     self.amount_replicas = []
   def draw_graph(self):
-    self.amount_replicas.append({ 'num_replicas': self.docker_controller.get_number_of_replicas(), 'time': time.time() })
+    current_time_struct = time.localtime(time.time())
+    minutes = current_time_struct.tm_min
+    seconds = current_time_struct.tm_sec
+    time_str = f"{minutes:02d}:{seconds:02d}"
+
+    self.amount_replicas.append({ 'num_replicas': self.docker_controller.get_number_of_replicas(), 'time': time_str })
     x_values = [item['time'] for item in self.amount_replicas]
     y_values = [item['num_replicas'] for item in self.amount_replicas]
 
@@ -113,17 +122,18 @@ def draw_loop():
   while True:
     print("Drawing")
     graphDrawer.draw_graph()
-    sleep(10)
+    sleep(15)
 def check_loop():
   while True:
     print("Getting average")
     averageCalculator.get_average()
-    sleep(10)
+    sleep(15)
     
 
 
 @app.route('/')
 def hello():
+  averageCalculator.total_requests += 1
   start_time = time.time()
   r = requests.get('http://web:8000')
   end_time = time.time()
