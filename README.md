@@ -1,3 +1,12 @@
+# ECE 422 Project
+
+Members: Owen Stadlwieser and Martin Rudolf
+
+
+
+Below is the original README from the fork that we based our project on.
+
+
 ECE 422: Reliable and Secure Systems Design 
 =============
 This repository provides the starter kit for the Reliability project. The `docker-images` folder
