@@ -2,8 +2,9 @@ version: "3"
 
 services:
   autoscaler:
-    image: owenstad/autoscaler:1
-    container_name: autoscaler
+    image: auto:1
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
     ports:
       - "8000:8000"
     deploy:
@@ -15,9 +16,8 @@ services:
           memory: 256M
   web:
     image: zhijiewang22/simpleweb:1
-    container_name: web
     ports:
-      - "5000:8000"
+      - "5003:8000"
     deploy:
       resources:
         limits:
