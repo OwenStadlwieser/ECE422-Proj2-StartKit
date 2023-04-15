@@ -1,0 +1,15 @@
+Base_line = 1.7
+Gamma_epsilon = 0.115
+Delta_epsilon = 0.35
+Monitor_interval = 15 seconds	
+While true:	
+  If response_times exists in window
+    Average = average of response_times
+  Clear response_times
+    If average < base_line - gamma_epsilon:
+  decrement_num_replicas()
+  Else if (average > base_line + delta_epsilon)
+    Factor = average // base_line
+    increment_num_replicas_by_factor(Factor)
+  Previous_average = average
+  Wait for monitor_interval
